@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Personal Finance Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark">₍₎</div> My Finance</div>
+    <nav class="nav">
+      <button class="active">◉ <span>Dashboard</span></button>
+      <button onclick="openAdd()">＋ <span>Tambah Transaksi</span></button>
+      <button onclick="scrollToSection('transactions')">≡ <span>Transaksi</span></button>
+      <button onclick="scrollToSection('budget')">▦ <span>Budget</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <b>Tips</b><br/>Catat transaksi setiap hari supaya saldo dan budget selalu akurat.
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="title">
+        <h1>Financial Overview</h1>
+        <p id="subtitle">Ringkasan keuangan pribadi</p>
+      </div>
+      <div class="actions">
+        <select id="period" class="select" onchange="renderAll()">
+          <option value="all">Semua waktu</option>
+          <option value="month">Bulan ini</option>
+          <option value="3m">3 bulan terakhir</option>
+        </select>
+        <button class="btn primary" onclick="openAdd()">＋ Transaksi</button>
+      </div>
+    </div>
+
+    <section class="grid cards">
+      <div class="card">
+        <div class="metric-title">Total Saldo <span class="pill">Net</span></div>
+        <div class="metric-value" id="balance">Rp0</div>
+        <div class="metric-foot">Pemasukan − pengeluaran</div>
+      </div>
+      <div class="card">
+        <div class="metric-title">Pemasukan <span class="trend up" id="incomeTrend">+0%</span></div>
+        <div class="metric-value income" id="income">Rp0</div>
+        <div class="metric-foot">Total pemasukan periode aktif</div>
+      </div>
+      <div class="card">
+        <div class="metric-title">Pengeluaran <span class="trend down" id="expenseTrend">0%</span></div>
+        <div class="metric-value expense" id="expense">Rp0</div>
+        <div class="metric-foot">Total pengeluaran periode aktif</div>
+      </div>
+      <div class="card">
+        <div class="metric-title">Savings Rate <span class="pill">Target 20%</span></div>
+        <div class="metric-value" id="savingRate">0%</div>
+        <div class="metric-foot">Porsi pemasukan yang tersisa</div>
+      </div>
+    </section>
+
+    <section class="grid row2">
+      <div class="card">
+        <div class="section-head">
+          <h3>Arus Kas</h3>
+          <div class="legend">
+            <span><i class="dot" style="background:var(--green)"></i>Pemasukan</span>
+            <span><i class="dot" style="background:var(--red)"></i>Pengeluaran</span>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="cashflowChart"></canvas></div>
+      </div>
+      <div class="card" id="budget">
+        <div class="section-head"><h3>Budget Bulanan</h3><span id="budgetTotalLabel">Rp0 / Rp0</span></div>
+        <div class="budget-list" id="budgetList"></div>
+      </div>
+    </section>
+
+    <section class="grid row3">
+      <div class="card">
+        <div class="section-head"><h3>Pengeluaran per Kategori</h3><span>Periode aktif</span></div>
+        <div class="chart-wrap" style="height:250px"><canvas id="categoryChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="section-head"><h3>Target Tabungan</h3><span>Personal goal</span></div>
+        <div class="goal-box">
+          <div class="goal-top"><div><div class="goal-meta">Dana darurat</div><div class="goal-amount" id="goalAmount">Rp0</div></div><span class="pill" id="goalPct">0%</span></div>
+          <div class="progress"><div id="goalProgress" style="width:0%;background:var(--primary)"></div></div>
+          <div class="goal-note" id="goalNote">Atur target tabungan dan saldo awal melalui transaksi.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="transactions">
+      <div class="section-head">
+        <h3>Transaksi Terbaru</h3>
+        <button class="btn secondary" onclick="exportCSV()">Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table class="tx-table">
+          <thead><tr><th>Transaksi</th><th>Kategori</th><th>Tanggal</th><th>Jumlah</th></tr></thead>
+          <tbody id="txBody"></tbody>
+        </table>
+      </div>
+      <div class="footer-note">Data disimpan secara lokal di browser (localStorage), tidak dikirim ke server.</div>
+    </section>
+  </main>
+</div>
+
+<button class="fab" onclick="openAdd()" aria-label="Tambah transaksi">＋</button>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <h2>Tambah Transaksi</h2>
+    <form id="txForm" onsubmit="saveTransaction(event)">
+      <div class="form-grid">
+        <div class="field">
+          <label>Jenis</label>
+          <select id="type" class="select" style="width:100%">
+            <option value="expense">Pengeluaran</option>
+            <option value="income">Pemasukan</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Tanggal</label>
+          <input id="date" class="input" type="date" required />
+        </div>
+        <div class="field full">
+          <label>Nama transaksi</label>
+          <input id="name" class="input" placeholder="Contoh: Gaji September / Makan siang" required />
+        </div>
+        <div class="field">
+          <label>Kategori</label>
+          <select id="category" class="select" style="width:100%">
+            <option>Makanan</option>
+            <option>Transportasi</option>
+            <option>Belanja</option>
+            <option>Tagihan</option>
+            <option>Hiburan</option>
+            <option>Kesehatan</option>
+            <option>Pendidikan</option>
+            <option>Gaji</option>
+            <option>Freelance</option>
+            <option>Lainnya</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Jumlah (Rp)</label>
+          <input id="amount" class="input" type="number" min="0" step="1000" placeholder="50000" required />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" onclick="closeModal()">Batal</button>
+        <button type="submit" class="btn primary">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+  <script src="script.js"></script>
+</body>
+</html>
